@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.map": "mapfile",
+			"main.h": "c",
+			"stm32g4xx_hal.h": "c",
+			"stm32g4xx_hal_conf.h": "c",
+			"cmsis_os.h": "c",
+			"stm32g4xx_hal_flash.h": "c",
+			"stm32g4xx_hal_def.h": "c",
+			"spi.h": "c"
+		}
+	}
+}
