@@ -19,16 +19,64 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "spi.h"
+#include "MPU6500def.h"
 
 /* USER CODE BEGIN 0 */
-uint8_t g_rx_data[10][2] = {0};
-
-const GPIODescriptorTypeDef g_SpiCsGPIO[] = 
+SPIReadDescriptor g_SPICommDevice[] = 
 {
-  [SPIORDER_IMU_ACC_X] = {SPI1_CS_ENC_L_GPIO_Port, SPI1_CS_ENC_L_Pin},
-  [SPIORDER_ENC_R    ] = {SPI1_CS_ENC_R_GPIO_Port, SPI1_CS_ENC_R_Pin},
-  [SPIORDER_ENC_L    ] = {SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin},
+  [SPIORDER_IMU_ACC_X] = {
+    .GPIOx = SPI1_CS_IMU_GPIO_Port,
+    .GPIOPin = SPI1_CS_IMU_Pin,
+    .CLKPolarity = LL_SPI_POLARITY_HIGH,
+    .CLKPhase = LL_SPI_PHASE_2EDGE,
+    .TxData = {
+      ACCEL_XOUT_H | FLAG_READ, 
+      ACCEL_XOUT_L | FLAG_READ, 
+      ACCEL_YOUT_H | FLAG_READ, 
+      ACCEL_YOUT_L | FLAG_READ, 
+      ACCEL_ZOUT_H | FLAG_READ, 
+      ACCEL_ZOUT_L | FLAG_READ, 
+      GYRO_XOUT_H  | FLAG_READ, 
+      GYRO_XOUT_L  | FLAG_READ, 
+      GYRO_YOUT_H  | FLAG_READ, 
+      GYRO_YOUT_L  | FLAG_READ, 
+      GYRO_ZOUT_H  | FLAG_READ, 
+      GYRO_ZOUT_L  | FLAG_READ, 
+      0x00,
+
+
+    },
+    .RxData = {0},
+    .TxRxBytes = 13,
+  },
+
+  [SPIORDER_ENC_R    ] = {
+    .GPIOx = SPI1_CS_ENC_R_GPIO_Port,
+    .GPIOPin = SPI1_CS_ENC_R_Pin,
+    .CLKPolarity = LL_SPI_POLARITY_LOW,
+    .CLKPhase = LL_SPI_PHASE_2EDGE,
+    .TxData = {
+      0x3F,
+      0xFF,
+    },
+    .RxData = {0},
+    .TxRxBytes = 2,
+  },
+
+  [SPIORDER_ENC_L    ] = {
+    .GPIOx = SPI1_CS_ENC_L_GPIO_Port,
+    .GPIOPin = SPI1_CS_ENC_L_Pin,
+    .CLKPolarity = LL_SPI_POLARITY_LOW,
+    .CLKPhase = LL_SPI_PHASE_2EDGE,
+    .TxData = {
+      0x3F,
+      0xFF,
+    },
+    .RxData = {0},
+    .TxRxBytes = 2,
+  },
 };
+
 
 /* USER CODE END 0 */
 
@@ -135,6 +183,8 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* spiHandle)
     HAL_NVIC_SetPriority(SPI1_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(SPI1_IRQn);
   /* USER CODE BEGIN SPI1_MspInit 1 */
+  __HAL_DMA_DISABLE_IT(&hdma_spi1_rx, DMA_IT_HT);
+  __HAL_DMA_DISABLE_IT(&hdma_spi1_tx, DMA_IT_HT);
 
   /* USER CODE END SPI1_MspInit 1 */
   }

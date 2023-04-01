@@ -139,20 +139,21 @@ void StartDefaultTask(void *argument)
     HAL_GPIO_WritePin(SPI1_CS_ENC_L_GPIO_Port, SPI1_CS_ENC_L_Pin, SET);
     HAL_GPIO_WritePin(SPI1_CS_ENC_R_GPIO_Port, SPI1_CS_ENC_R_Pin, SET);
     HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, SET);
-    uint8_t rx_data[4] = {0};
     uint8_t tx_data[4] = {0};
+    uint8_t rx_data[4] = {0};
   
   osTimerStart(Timer1kHzHandle, 1); // 1ms Timer start
 
-  tx_data[0] = 117 | 0x80;
-  tx_data[1] = 0x00;  // dummy
-  osDelay(100);
-  HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, RESET);
-  HAL_SPI_TransmitReceive_DMA(&hspi1, tx_data, rx_data, 2);
-  osDelay(1);
-  
+  // tx_data[0] = 117 | 0x80;
+  // tx_data[1] = 0x00;  // dummy
+  // osDelay(100);
+  // HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, RESET);
+  // HAL_SPI_TransmitReceive_DMA(&hspi1, tx_data, rx_data, 2);
+  // osDelay(1);
+
   for(;;)
   {
+    osDelay(100);
     // HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, SET);
 #if 0
     tx_data[0] = 0x3F | 0x40;
@@ -174,12 +175,16 @@ void Timer1kHzCallback(void *argument)
 {
   /* USER CODE BEGIN Timer1kHzCallback */
   static int counter = 0;
+  SPIReadDescriptor* device = &g_SPICommDevice[SPIORDER_FIRST];
 
-  tx_data[0] = 0x3F | 0x40;
-  tx_data[1] = 0xFF;
-  HAL_GPIO_WritePin(SPI1_CS_ENC_L_GPIO_Port, SPI1_CS_ENC_L_Pin, RESET);
-  HAL_SPI_TransmitReceive_DMA(&hspi1, tx_data, rx_data, 2);
-  g_getData = (rx_data[1] | rx_data[0] << 8) & 0b0011111111111111;
+  __HAL_SPI_DISABLE(&hspi1);
+  LL_SPI_SetClockPolarity(hspi1.Instance, device->CLKPolarity);
+  LL_SPI_SetClockPhase(hspi1.Instance, device->CLKPhase);
+  __HAL_SPI_ENABLE(&hspi1);
+  HAL_GPIO_WritePin(device->GPIOx, device->GPIOPin, RESET);
+  HAL_SPI_TransmitReceive_DMA(&hspi1, device->TxData, device->RxData, device->TxRxBytes);
+  __HAL_DMA_DISABLE_IT(hspi1.hdmarx, DMA_IT_HT);
+  //g_getData = (g_rx_data[1] | g_rx_data[0] << 8) & 0b0011111111111111;
   (void)g_getData;
 
 

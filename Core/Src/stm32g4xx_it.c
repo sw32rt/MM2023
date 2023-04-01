@@ -193,25 +193,29 @@ void SysTick_Handler(void)
 void DMA1_Channel1_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Channel1_IRQn 0 */
-  static counter = 0;
-  const tx_data[][2] = 
-  {
-    [SPIORDER_IMU_ACC_X] = {117 | 0x80, 0x00},
-    [SPIORDER_ENC_R    ] = {0x3F, 0xFF},
-    [SPIORDER_ENC_L    ] = {0x3F, 0xFF},
-  };
+  static int SpiOrder = 0;
 
   /* USER CODE END DMA1_Channel1_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_spi1_rx);
-  /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
   HAL_GPIO_WritePin(SPI1_CS_ENC_L_GPIO_Port, SPI1_CS_ENC_L_Pin, SET);
   HAL_GPIO_WritePin(SPI1_CS_ENC_R_GPIO_Port, SPI1_CS_ENC_R_Pin, SET);
   HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, SET);
+  /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
+  if(SpiOrder == SPIORDER_FIRST)
+  {
+    SpiOrder++;
+    return;
+  }
 
-  HAL_GPIO_WritePin(g_SpiCsGPIO[counter].GPIOx, g_SpiCsGPIO[counter].GPIO_Pin, RESET);
-  HAL_SPI_TransmitReceive_DMA(&hspi1, tx_data[counter], g_rx_data[counter], 2);
+  __HAL_SPI_DISABLE(&hspi1);
+  LL_SPI_SetClockPolarity(hspi1.Instance, g_SPICommDevice[SpiOrder].CLKPolarity);
+  LL_SPI_SetClockPhase(hspi1.Instance, g_SPICommDevice[SpiOrder].CLKPhase);
+  __HAL_SPI_ENABLE(&hspi1);
+  HAL_GPIO_WritePin(g_SPICommDevice[SpiOrder].GPIOx, g_SPICommDevice[SpiOrder].GPIOPin, RESET);
+  HAL_SPI_TransmitReceive_DMA(&hspi1, g_SPICommDevice[SpiOrder].TxData, g_SPICommDevice[SpiOrder].RxData, g_SPICommDevice[SpiOrder].TxRxBytes);
+  __HAL_DMA_DISABLE_IT(hspi1.hdmarx, DMA_IT_HT);
 
-  counter++; counter %= SPIORDER_NUM;
+  SpiOrder++; SpiOrder %= SPIORDER_NUM;
   /* USER CODE END DMA1_Channel1_IRQn 1 */
 }
 
