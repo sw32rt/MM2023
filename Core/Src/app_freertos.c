@@ -181,9 +181,10 @@ void Timer1kHzCallback(void *argument)
   LL_SPI_SetClockPolarity(hspi1.Instance, device->CLKPolarity);
   LL_SPI_SetClockPhase(hspi1.Instance, device->CLKPhase);
   __HAL_SPI_ENABLE(&hspi1);
+
+  /* CSアサート */
   HAL_GPIO_WritePin(device->GPIOx, device->GPIOPin, RESET);
   HAL_SPI_TransmitReceive_DMA(&hspi1, device->TxData, device->RxData, device->TxRxBytes);
-  __HAL_DMA_DISABLE_IT(hspi1.hdmarx, DMA_IT_HT);
   //g_getData = (g_rx_data[1] | g_rx_data[0] << 8) & 0b0011111111111111;
   (void)g_getData;
 

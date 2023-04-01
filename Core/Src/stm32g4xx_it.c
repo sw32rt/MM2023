@@ -197,10 +197,11 @@ void DMA1_Channel1_IRQHandler(void)
 
   /* USER CODE END DMA1_Channel1_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_spi1_rx);
+  /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
   HAL_GPIO_WritePin(SPI1_CS_ENC_L_GPIO_Port, SPI1_CS_ENC_L_Pin, SET);
   HAL_GPIO_WritePin(SPI1_CS_ENC_R_GPIO_Port, SPI1_CS_ENC_R_Pin, SET);
   HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, SET);
-  /* USER CODE BEGIN DMA1_Channel1_IRQn 1 */
+
   if(SpiOrder == SPIORDER_FIRST)
   {
     SpiOrder++;
@@ -213,7 +214,6 @@ void DMA1_Channel1_IRQHandler(void)
   __HAL_SPI_ENABLE(&hspi1);
   HAL_GPIO_WritePin(g_SPICommDevice[SpiOrder].GPIOx, g_SPICommDevice[SpiOrder].GPIOPin, RESET);
   HAL_SPI_TransmitReceive_DMA(&hspi1, g_SPICommDevice[SpiOrder].TxData, g_SPICommDevice[SpiOrder].RxData, g_SPICommDevice[SpiOrder].TxRxBytes);
-  __HAL_DMA_DISABLE_IT(hspi1.hdmarx, DMA_IT_HT);
 
   SpiOrder++; SpiOrder %= SPIORDER_NUM;
   /* USER CODE END DMA1_Channel1_IRQn 1 */
@@ -273,20 +273,6 @@ void SPI1_IRQHandler(void)
   /* USER CODE BEGIN SPI1_IRQn 1 */
 
   /* USER CODE END SPI1_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMAMUX overrun interrupt.
-  */
-void DMAMUX_OVR_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMAMUX_OVR_IRQn 0 */
-
-  /* USER CODE END DMAMUX_OVR_IRQn 0 */
-
-  /* USER CODE BEGIN DMAMUX_OVR_IRQn 1 */
-
-  /* USER CODE END DMAMUX_OVR_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
