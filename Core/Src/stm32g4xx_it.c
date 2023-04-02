@@ -25,6 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "spi.h"
+#include "sensor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -63,6 +64,9 @@ extern DMA_HandleTypeDef hdma_i2c2_tx;
 extern DMA_HandleTypeDef hdma_spi1_rx;
 extern DMA_HandleTypeDef hdma_spi1_tx;
 extern SPI_HandleTypeDef hspi1;
+extern DMA_HandleTypeDef hdma_usart1_rx;
+extern DMA_HandleTypeDef hdma_usart1_tx;
+extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -205,6 +209,16 @@ void DMA1_Channel1_IRQHandler(void)
   if(SpiOrder == SPIORDER_FIRST)
   {
     SpiOrder++;
+    g_sensor.acc_x  = *(uint16_t*)&(g_SPICommDevice[SPIORDER_IMU].RxData[0]);
+    g_sensor.acc_y  = *(uint16_t*)&(g_SPICommDevice[SPIORDER_IMU].RxData[2]);
+    g_sensor.acc_z  = *(uint16_t*)&(g_SPICommDevice[SPIORDER_IMU].RxData[4]);
+    g_sensor.gyro_x = *(uint16_t*)&(g_SPICommDevice[SPIORDER_IMU].RxData[6]);
+    g_sensor.gyro_y = *(uint16_t*)&(g_SPICommDevice[SPIORDER_IMU].RxData[8]);
+    g_sensor.gyro_z = *(uint16_t*)&(g_SPICommDevice[SPIORDER_IMU].RxData[10]);
+    g_SPICommDevice[SPIORDER_ENC_R].RxData[0] &= 0x3F;
+    g_sensor.enc_r  = g_SPICommDevice[SPIORDER_ENC_R].RxData[1] | g_SPICommDevice[SPIORDER_ENC_R].RxData[0] << 8;
+    g_SPICommDevice[SPIORDER_ENC_L].RxData[0] &= 0x3F;
+    g_sensor.enc_l  = g_SPICommDevice[SPIORDER_ENC_L].RxData[1] | g_SPICommDevice[SPIORDER_ENC_L].RxData[0] << 8;
     return;
   }
 
@@ -262,6 +276,34 @@ void DMA1_Channel4_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles DMA1 channel5 global interrupt.
+  */
+void DMA1_Channel5_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel5_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel5_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart1_rx);
+  /* USER CODE BEGIN DMA1_Channel5_IRQn 1 */
+
+  /* USER CODE END DMA1_Channel5_IRQn 1 */
+}
+
+/**
+  * @brief This function handles DMA1 channel6 global interrupt.
+  */
+void DMA1_Channel6_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA1_Channel6_IRQn 0 */
+
+  /* USER CODE END DMA1_Channel6_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart1_tx);
+  /* USER CODE BEGIN DMA1_Channel6_IRQn 1 */
+
+  /* USER CODE END DMA1_Channel6_IRQn 1 */
+}
+
+/**
   * @brief This function handles SPI1 global interrupt.
   */
 void SPI1_IRQHandler(void)
@@ -273,6 +315,20 @@ void SPI1_IRQHandler(void)
   /* USER CODE BEGIN SPI1_IRQn 1 */
 
   /* USER CODE END SPI1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART1 global interrupt / USART1 wake-up interrupt through EXTI line 25.
+  */
+void USART1_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART1_IRQn 0 */
+
+  /* USER CODE END USART1_IRQn 0 */
+  HAL_UART_IRQHandler(&huart1);
+  /* USER CODE BEGIN USART1_IRQn 1 */
+
+  /* USER CODE END USART1_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

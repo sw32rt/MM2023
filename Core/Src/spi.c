@@ -25,7 +25,7 @@
 
 SPIReadDescriptor g_SPICommDevice[] = 
 {
-  [SPIORDER_IMU_ACC_X] = {
+  [SPIORDER_IMU] = {
     .GPIOx = SPI1_CS_IMU_GPIO_Port,
     .GPIOPin = SPI1_CS_IMU_Pin,
     .CLKPolarity = LL_SPI_POLARITY_HIGH,

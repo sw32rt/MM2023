@@ -13,7 +13,9 @@
 			"cmsis_os.h": "c",
 			"stm32g4xx_hal_flash.h": "c",
 			"stm32g4xx_hal_def.h": "c",
-			"spi.h": "c"
+			"spi.h": "c",
+			"custom_bus.h": "c",
+			"custom_conf.h": "c"
 		}
 	}
 }

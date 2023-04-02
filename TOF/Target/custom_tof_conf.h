@@ -31,7 +31,7 @@ extern "C" {
 #include "custom_errno.h"
 
 /* USER CODE BEGIN 1 */
-
+#include "main.h"
 /* USER CODE END 1 */
 
 #define USE_CUSTOM_RANGING_VL53L4CD (1U)

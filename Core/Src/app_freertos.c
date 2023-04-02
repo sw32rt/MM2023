@@ -26,6 +26,11 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "spi.h"
+#include "tim.h"
+#include "usart.h"
+#include "custom_ranging_sensor.h"
+#include "sensor.h"
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -135,26 +140,45 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
-  /* Infinite loop */
-    HAL_GPIO_WritePin(SPI1_CS_ENC_L_GPIO_Port, SPI1_CS_ENC_L_Pin, SET);
-    HAL_GPIO_WritePin(SPI1_CS_ENC_R_GPIO_Port, SPI1_CS_ENC_R_Pin, SET);
-    HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, SET);
-    uint8_t tx_data[4] = {0};
-    uint8_t rx_data[4] = {0};
+  VL53L4CD_Result_t result = {0};
+
+  HAL_GPIO_WritePin(SPI1_CS_ENC_L_GPIO_Port, SPI1_CS_ENC_L_Pin, SET);
+  HAL_GPIO_WritePin(SPI1_CS_ENC_R_GPIO_Port, SPI1_CS_ENC_R_Pin, SET);
+  HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, SET);
+
+  CUSTOM_RANGING_SENSOR_Init(0);
+  CUSTOM_RANGING_SENSOR_Start(0, VL53L4CD_MODE_ASYNC_CONTINUOUS);
+  osTimerStart(Timer1kHzHandle, 20); // 1ms Timer start
+
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
+  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
+
+  __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, 0);
+
+  __HAL_TIM_SET_AUTORELOAD(&htim8, 42928);
+  uint16_t period = __HAL_TIM_GET_AUTORELOAD(&htim8);
+  __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, period/2);
+  // HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_2);
   
-  osTimerStart(Timer1kHzHandle, 1); // 1ms Timer start
-
-  // tx_data[0] = 117 | 0x80;
-  // tx_data[1] = 0x00;  // dummy
-  // osDelay(100);
-  // HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, RESET);
-  // HAL_SPI_TransmitReceive_DMA(&hspi1, tx_data, rx_data, 2);
-  // osDelay(1);
-
+  /* Infinite loop */
   for(;;)
   {
-    osDelay(100);
+    // CUSTOM_RANGING_SENSOR_GetDistance(0, &result);
     // HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, SET);
+
+
+    // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 500);
+    // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 500);
+    osDelay(1000);
+    // HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_2);
+
+    // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 1300);
+    // osDelay(1000);
+    // HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
+    // HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);
+
 #if 0
     tx_data[0] = 0x3F | 0x40;
     tx_data[1] = 0xFF;
@@ -174,6 +198,20 @@ void StartDefaultTask(void *argument)
 void Timer1kHzCallback(void *argument)
 {
   /* USER CODE BEGIN Timer1kHzCallback */
+  static uint8_t sendbuff[128] = {0};
+
+  sprintf(sendbuff, "ax:%d,ay:%d,az:%d,gx:%d,gy:%d,gz:%d,er:%d,el:%d\n",
+    g_sensor.acc_x ,
+    g_sensor.acc_y ,
+    g_sensor.acc_z ,
+    g_sensor.gyro_x,
+    g_sensor.gyro_y,
+    g_sensor.gyro_z,
+    g_sensor.enc_r ,
+    g_sensor.enc_l 
+  );
+  HAL_UART_Transmit_DMA(&huart1, sendbuff, 100);
+
   static int counter = 0;
   SPIReadDescriptor* device = &g_SPICommDevice[SPIORDER_FIRST];
 
@@ -182,7 +220,6 @@ void Timer1kHzCallback(void *argument)
   LL_SPI_SetClockPhase(hspi1.Instance, device->CLKPhase);
   __HAL_SPI_ENABLE(&hspi1);
 
-  /* CSアサート */
   HAL_GPIO_WritePin(device->GPIOx, device->GPIOPin, RESET);
   HAL_SPI_TransmitReceive_DMA(&hspi1, device->TxData, device->RxData, device->TxRxBytes);
   //g_getData = (g_rx_data[1] | g_rx_data[0] << 8) & 0b0011111111111111;

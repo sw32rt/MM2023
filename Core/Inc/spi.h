@@ -67,7 +67,7 @@ typedef struct _SPIReadDescriptor
 
 typedef enum _SPIReadOrder{
   SPIORDER_FIRST     = 0,
-  SPIORDER_IMU_ACC_X = 0,
+  SPIORDER_IMU = 0,
   SPIORDER_ENC_R,
   SPIORDER_ENC_L,
   SPIORDER_NUM,
