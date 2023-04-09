@@ -29,20 +29,9 @@
 
 #include "custom_tof_conf.h"
 #include "ranging_sensor.h"
-
-#ifndef USE_CUSTOM_RANGING_VL53L4CD
-#define USE_CUSTOM_RANGING_VL53L4CD (1U)
-#endif
-
-#if (USE_CUSTOM_RANGING_VL53L4CD == 1U)
 #include "vl53l4cd.h"
-#endif
 
-#if (USE_CUSTOM_RANGING_VL53L4CD == 1U)
-#define CUSTOM_VL53L4CD (0)
-#endif
-
-#define RANGING_SENSOR_VL53L4CD_ADDRESS     (VL53L4CD_DEVICE_ADDRESS)
+#define RANGING_SENSOR_VL53L4CD_DEFAULT_ADDRESS     (VL53L4CD_DEVICE_ADDRESS)
 #define RANGING_SENSOR_NB_TARGET_PER_ZONE   (VL53L4CD_NB_TARGET_PER_ZONE)
 #define RANGING_SENSOR_MAX_NB_ZONES         (VL53L4CD_MAX_NB_ZONES)
 
@@ -107,20 +96,40 @@ typedef struct
   RANGING_SENSOR_ZoneResult_t ZoneResult[RANGING_SENSOR_MAX_NB_ZONES];
 } RANGING_SENSOR_Result_t;
 
-extern void *CUSTOM_RANGING_CompObj[CUSTOM_RANGING_INSTANCES_NBR];
+typedef struct
+{
+  GPIO_TypeDef *GPIOx;
+  uint16_t GPIO_Pin;
+  uint32_t I2CAddress;
+} RANGING_SENSOR_DeviceDiscriptor_t;
+
+typedef enum _TOFInstance{
+  TOF_INSTANCE_L = 0,
+  TOF_INSTANCE_C    ,
+  TOF_INSTANCE_R    ,
+}TOFInstance;
+
+typedef enum _TOFI2CAddress{
+  TOF_I2C_ADDRESS_L = RANGING_SENSOR_VL53L4CD_DEFAULT_ADDRESS + 2,
+  TOF_I2C_ADDRESS_C = RANGING_SENSOR_VL53L4CD_DEFAULT_ADDRESS + 4,
+  TOF_I2C_ADDRESS_R = RANGING_SENSOR_VL53L4CD_DEFAULT_ADDRESS + 8,
+}TOFI2CAddress;
+
+extern VL53L4CD_Object_t CUSTOM_RANGING_CompObj[CUSTOM_RANGING_INSTANCES_NBR];
+extern const RANGING_SENSOR_DeviceDiscriptor_t g_ToFDevice[USE_CUSTOM_RANGING_VL53L4CD];
 
 int32_t CUSTOM_RANGING_SENSOR_Init(uint32_t Instance);
 int32_t CUSTOM_RANGING_SENSOR_DeInit(uint32_t Instance);
 int32_t CUSTOM_RANGING_SENSOR_ReadID(uint32_t Instance, uint32_t *pId);
-int32_t CUSTOM_RANGING_SENSOR_GetCapabilities(uint32_t Instance, RANGING_SENSOR_Capabilities_t *pCapabilities);
-int32_t CUSTOM_RANGING_SENSOR_ConfigProfile(uint32_t Instance, RANGING_SENSOR_ProfileConfig_t *pConfig);
-int32_t CUSTOM_RANGING_SENSOR_ConfigROI(uint32_t Instance, RANGING_SENSOR_ROIConfig_t *pConfig);
-int32_t CUSTOM_RANGING_SENSOR_ConfigIT(uint32_t Instance, RANGING_SENSOR_ITConfig_t *pConfig);
-int32_t CUSTOM_RANGING_SENSOR_GetDistance(uint32_t Instance, RANGING_SENSOR_Result_t *pResult);
+int32_t CUSTOM_RANGING_SENSOR_GetCapabilities(uint32_t Instance, VL53L4CD_Capabilities_t *pCapabilities);
+int32_t CUSTOM_RANGING_SENSOR_ConfigProfile(uint32_t Instance, VL53L4CD_ProfileConfig_t *pConfig);
+int32_t CUSTOM_RANGING_SENSOR_ConfigROI(uint32_t Instance, VL53L4CD_ROIConfig_t *pConfig);
+int32_t CUSTOM_RANGING_SENSOR_ConfigIT(uint32_t Instance, VL53L4CD_ITConfig_t *pConfig);
+int32_t CUSTOM_RANGING_SENSOR_GetDistance(uint32_t Instance, VL53L4CD_Result_t *pResult);
 int32_t CUSTOM_RANGING_SENSOR_Start(uint32_t Instance, uint8_t Mode);
 int32_t CUSTOM_RANGING_SENSOR_Stop(uint32_t Instance);
-int32_t CUSTOM_RANGING_SENSOR_SetAddress(uint32_t Instance, uint16_t Address);
-int32_t CUSTOM_RANGING_SENSOR_GetAddress(uint32_t Instance, uint16_t *pAddress);
+int32_t CUSTOM_RANGING_SENSOR_SetAddress(uint32_t Instance, uint32_t Address);
+int32_t CUSTOM_RANGING_SENSOR_GetAddress(uint32_t Instance, uint32_t *pAddress);
 int32_t CUSTOM_RANGING_SENSOR_SetPowerMode(uint32_t Instance, uint32_t PowerMode);
 int32_t CUSTOM_RANGING_SENSOR_GetPowerMode(uint32_t Instance, uint32_t *pPowerMode);
 

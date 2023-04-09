@@ -24,6 +24,5 @@
 /* Defines ------------------------------------------------------------------*/
 /* STMicroelectronics.X-CUBE-TOF1.3.2.0 */
 #define VL53L4CD
-#define BSP_RANGING_SENSOR
 
 #endif /* __RTE_COMPONENTS_H__ */

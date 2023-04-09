@@ -15,7 +15,8 @@
 			"stm32g4xx_hal_def.h": "c",
 			"spi.h": "c",
 			"custom_bus.h": "c",
-			"custom_conf.h": "c"
+			"custom_conf.h": "c",
+			"vl53l4cd.h": "c"
 		}
 	}
 }

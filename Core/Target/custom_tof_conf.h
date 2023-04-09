@@ -34,15 +34,13 @@ extern "C" {
 #include "main.h"
 /* USER CODE END 1 */
 
-#define USE_CUSTOM_RANGING_VL53L4CD (1U)
-
-#define CUSTOM_VL53L4CD_XSHUT_PORT    GPIOA
-#define CUSTOM_VL53L4CD_XSHUT_PIN     GPIO_PIN_11
+#define USE_CUSTOM_RANGING_VL53L4CD (3U)
 
 #define CUSTOM_VL53L4CD_I2C_Init      BSP_I2C2_Init
 #define CUSTOM_VL53L4CD_I2C_DeInit    BSP_I2C2_DeInit
 #define CUSTOM_VL53L4CD_I2C_WriteReg  BSP_I2C2_Send
 #define CUSTOM_VL53L4CD_I2C_ReadReg   BSP_I2C2_Recv
+
 
 #ifdef __cplusplus
 }

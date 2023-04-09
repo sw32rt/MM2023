@@ -31,6 +31,8 @@
 #include "custom_ranging_sensor.h"
 #include "sensor.h"
 #include "stdio.h"
+
+#include "sound.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -67,6 +69,19 @@ const osThreadAttr_t defaultTask_attributes = {
   .cb_size = sizeof(defaultTaskControlBlock),
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for soundTask */
+osThreadId_t soundTaskHandle;
+uint32_t soundTaskBuffer[ 128 ];
+osStaticThreadDef_t soundTaskControlBlock;
+const osThreadAttr_t soundTask_attributes = {
+  .name = "soundTask",
+  .stack_mem = &soundTaskBuffer[0],
+  .stack_size = sizeof(soundTaskBuffer),
+  .cb_mem = &soundTaskControlBlock,
+  .cb_size = sizeof(soundTaskControlBlock),
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
 /* Definitions for Timer1kHz */
 osTimerId_t Timer1kHzHandle;
 osStaticTimerDef_t Timer_1kHzControlBlock;
@@ -75,6 +90,7 @@ const osTimerAttr_t Timer1kHz_attributes = {
   .cb_mem = &Timer_1kHzControlBlock,
   .cb_size = sizeof(Timer_1kHzControlBlock),
 };
+
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -119,6 +135,7 @@ void MX_FREERTOS_Init(void) {
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  soundTaskHandle = osThreadNew(g_SoundTask, NULL, &soundTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -146,8 +163,12 @@ void StartDefaultTask(void *argument)
   HAL_GPIO_WritePin(SPI1_CS_ENC_R_GPIO_Port, SPI1_CS_ENC_R_Pin, SET);
   HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, SET);
 
-  CUSTOM_RANGING_SENSOR_Init(0);
-  CUSTOM_RANGING_SENSOR_Start(0, VL53L4CD_MODE_ASYNC_CONTINUOUS);
+  CUSTOM_RANGING_SENSOR_Init(TOF_INSTANCE_L);
+  CUSTOM_RANGING_SENSOR_Init(TOF_INSTANCE_C);
+  CUSTOM_RANGING_SENSOR_Init(TOF_INSTANCE_R);
+  CUSTOM_RANGING_SENSOR_Start(TOF_INSTANCE_L, VL53L4CD_MODE_ASYNC_CONTINUOUS);
+  CUSTOM_RANGING_SENSOR_Start(TOF_INSTANCE_C, VL53L4CD_MODE_ASYNC_CONTINUOUS);
+  CUSTOM_RANGING_SENSOR_Start(TOF_INSTANCE_R, VL53L4CD_MODE_ASYNC_CONTINUOUS);
   osTimerStart(Timer1kHzHandle, 20); // 1ms Timer start
 
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
@@ -155,23 +176,41 @@ void StartDefaultTask(void *argument)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
-  __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, 0);
-
-  __HAL_TIM_SET_AUTORELOAD(&htim8, 42928);
-  uint16_t period = __HAL_TIM_GET_AUTORELOAD(&htim8);
-  __HAL_TIM_SET_COMPARE(&htim8, TIM_CHANNEL_2, period/2);
-  // HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_2);
+  g_SoundInit();
   
+  static uint8_t sendbuff[128] = {0};
   /* Infinite loop */
   for(;;)
   {
-    // CUSTOM_RANGING_SENSOR_GetDistance(0, &result);
-    // HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, SET);
+    CUSTOM_RANGING_SENSOR_GetDistance(TOF_INSTANCE_L, &result);
+    g_sensor.range_l = result.ZoneResult[0].Distance[0];
+    CUSTOM_RANGING_SENSOR_GetDistance(TOF_INSTANCE_C, &result);
+    g_sensor.range_f = result.ZoneResult[0].Distance[0];
+    CUSTOM_RANGING_SENSOR_GetDistance(TOF_INSTANCE_R, &result);
+    g_sensor.range_r = result.ZoneResult[0].Distance[0];
 
+    // sprintf(sendbuff, "ax:%d,ay:%d,az:%d,gx:%d,gy:%d,gz:%d,er:%d,el:%d\n",
+    //   g_sensor.acc_x ,
+    //   g_sensor.acc_y ,
+    //   g_sensor.acc_z ,
+    //   g_sensor.gyro_x,
+    //   g_sensor.gyro_y,
+    //   g_sensor.gyro_z,
+    //   g_sensor.enc_r ,
+    //   g_sensor.enc_l 
+    // );
+    sprintf(sendbuff, "L:%04d,C:%04d,R:%04d\n",
+      g_sensor.range_l ,
+      g_sensor.range_f ,
+      g_sensor.range_r 
+    );
+
+
+    HAL_UART_Transmit_DMA(&huart1, sendbuff, 100);
 
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 500);
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 500);
-    osDelay(1000);
+    osDelay(100);
     // HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_2);
 
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 1300);
@@ -198,19 +237,7 @@ void StartDefaultTask(void *argument)
 void Timer1kHzCallback(void *argument)
 {
   /* USER CODE BEGIN Timer1kHzCallback */
-  static uint8_t sendbuff[128] = {0};
 
-  sprintf(sendbuff, "ax:%d,ay:%d,az:%d,gx:%d,gy:%d,gz:%d,er:%d,el:%d\n",
-    g_sensor.acc_x ,
-    g_sensor.acc_y ,
-    g_sensor.acc_z ,
-    g_sensor.gyro_x,
-    g_sensor.gyro_y,
-    g_sensor.gyro_z,
-    g_sensor.enc_r ,
-    g_sensor.enc_l 
-  );
-  HAL_UART_Transmit_DMA(&huart1, sendbuff, 100);
 
   static int counter = 0;
   SPIReadDescriptor* device = &g_SPICommDevice[SPIORDER_FIRST];
