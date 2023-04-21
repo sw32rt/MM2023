@@ -5,6 +5,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 
+#include "app_freertos.h"
 #include "sound.h"
 #include "stdint.h"
 #include "tim.h"
@@ -194,11 +195,13 @@
 
 #define SCORE_MEASURE_RESOLUTION 4
 #define SCORE_MEASURE 4
+#define SCORE_MEASURE_SETS 8 
 #define BPM (180) * SCORE_MEASURE_RESOLUTION
 #define UPDATE_RETE (1000 / (BPM / 60))
 
 /* Private variables ---------------------------------------------------------*/
-const uint16_t score[][SCORE_MEASURE][SCORE_MEASURE_RESOLUTION] = 
+
+const uint16_t music1[][SCORE_MEASURE][SCORE_MEASURE_RESOLUTION] = 
 {
     {
         {
@@ -409,7 +412,15 @@ const uint16_t score[][SCORE_MEASURE][SCORE_MEASURE_RESOLUTION] =
             B5,
         },
     },
+};
 
+const score_t score[] = 
+{
+    [SCORE_INDEX_0] = 
+    {
+        .pScore = (uint16_t*)music1,
+        .length = (sizeof(music1) / sizeof(uint16_t))
+    },
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -424,19 +435,15 @@ void soundOut(uint16_t period);
   */
 void g_SoundTask(void *argument)
 {
-    uint16_t* notes = (uint16_t*)score;
-    uint16_t iterator = 0;
-    osThreadId_t threadID = osThreadGetId();
-    osDelay(1000);
+    scoreIndex Index;
 
     while(1)
     {
-        soundOut(notes[iterator]);
-        osDelay(UPDATE_RETE);
-        iterator++;
-        if(iterator == sizeof(score))
+        osMessageQueueGet(soundQueueHandle, &Index, NULL, 0);
+        for(int iterator = 0; iterator < score[Index].length; iterator++)
         {
-            osThreadSuspend(threadID);
+            soundOut(score[Index].pScore[iterator]);
+            osDelay(UPDATE_RETE);
         }
     }
 }

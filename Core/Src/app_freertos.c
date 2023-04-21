@@ -25,6 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "app_freertos.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
@@ -37,6 +38,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 typedef StaticTask_t osStaticThreadDef_t;
+typedef StaticQueue_t osStaticMessageQDef_t;
 typedef StaticTimer_t osStaticTimerDef_t;
 /* USER CODE BEGIN PTD */
 
@@ -79,9 +81,19 @@ const osThreadAttr_t soundTask_attributes = {
   .stack_size = sizeof(soundTaskBuffer),
   .cb_mem = &soundTaskControlBlock,
   .cb_size = sizeof(soundTaskControlBlock),
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
-
+/* Definitions for soundQueue */
+osMessageQueueId_t soundQueueHandle;
+uint8_t soundQueueBuffer[ 2 * sizeof( intptr_t ) ];
+osStaticMessageQDef_t soundQueueControlBlock;
+const osMessageQueueAttr_t soundQueue_attributes = {
+  .name = "soundQueue",
+  .cb_mem = &soundQueueControlBlock,
+  .cb_size = sizeof(soundQueueControlBlock),
+  .mq_mem = &soundQueueBuffer,
+  .mq_size = sizeof(soundQueueBuffer)
+};
 /* Definitions for Timer1kHz */
 osTimerId_t Timer1kHzHandle;
 osStaticTimerDef_t Timer_1kHzControlBlock;
@@ -91,13 +103,13 @@ const osTimerAttr_t Timer1kHz_attributes = {
   .cb_size = sizeof(Timer_1kHzControlBlock),
 };
 
-
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
+extern void g_SoundTask(void *argument);
 void Timer1kHzCallback(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -128,6 +140,10 @@ void MX_FREERTOS_Init(void) {
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
+  /* Create the queue(s) */
+  /* creation of soundQueue */
+  soundQueueHandle = osMessageQueueNew (2, sizeof(intptr_t), &soundQueue_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -135,6 +151,8 @@ void MX_FREERTOS_Init(void) {
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
+  /* creation of soundTask */
   soundTaskHandle = osThreadNew(g_SoundTask, NULL, &soundTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -199,11 +217,11 @@ void StartDefaultTask(void *argument)
     //   g_sensor.enc_r ,
     //   g_sensor.enc_l 
     // );
-    sprintf(sendbuff, "L:%04d,C:%04d,R:%04d\n",
-      g_sensor.range_l ,
-      g_sensor.range_f ,
-      g_sensor.range_r 
-    );
+//    sprintf(sendbuff, "L:%04d,C:%04d,R:%04d\n",
+//      g_sensor.range_l ,
+//      g_sensor.range_f ,
+//      g_sensor.range_r
+//    );
 
 
     HAL_UART_Transmit_DMA(&huart1, sendbuff, 100);
