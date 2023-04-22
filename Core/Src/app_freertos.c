@@ -31,6 +31,7 @@
 #include "usart.h"
 #include "custom_ranging_sensor.h"
 #include "sensor.h"
+#include "tof.h"
 #include "stdio.h"
 
 #include "sound.h"
@@ -40,6 +41,7 @@
 typedef StaticTask_t osStaticThreadDef_t;
 typedef StaticQueue_t osStaticMessageQDef_t;
 typedef StaticTimer_t osStaticTimerDef_t;
+typedef StaticSemaphore_t osStaticSemaphoreDef_t;
 /* USER CODE BEGIN PTD */
 
 /* USER CODE END PTD */
@@ -82,6 +84,18 @@ const osThreadAttr_t soundTask_attributes = {
   .cb_size = sizeof(soundTaskControlBlock),
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for tofRangingTask */
+osThreadId_t tofRangingTaskHandle;
+uint32_t tofRangingTaskBuffer[ 128 ];
+osStaticThreadDef_t tofRangingTaskControlBlock;
+const osThreadAttr_t tofRangingTask_attributes = {
+  .name = "tofRangingTask",
+  .stack_mem = &tofRangingTaskBuffer[0],
+  .stack_size = sizeof(tofRangingTaskBuffer),
+  .cb_mem = &tofRangingTaskControlBlock,
+  .cb_size = sizeof(tofRangingTaskControlBlock),
+  .priority = (osPriority_t) osPriorityHigh,
+};
 /* Definitions for soundQueue */
 osMessageQueueId_t soundQueueHandle;
 uint8_t soundQueueBuffer[ 2 * sizeof( scoreIndex ) ];
@@ -101,6 +115,30 @@ const osTimerAttr_t Timer1kHz_attributes = {
   .cb_mem = &Timer_1kHzControlBlock,
   .cb_size = sizeof(Timer_1kHzControlBlock),
 };
+/* Definitions for measurementTriggerSemaphore */
+osSemaphoreId_t measurementTriggerSemaphoreHandle;
+osStaticSemaphoreDef_t measurementTriggerSemaphoreControlBlock;
+const osSemaphoreAttr_t measurementTriggerSemaphore_attributes = {
+  .name = "measurementTriggerSemaphore",
+  .cb_mem = &measurementTriggerSemaphoreControlBlock,
+  .cb_size = sizeof(measurementTriggerSemaphoreControlBlock),
+};
+/* Definitions for i2cTxCompleteSemaphore */
+osSemaphoreId_t i2cTxCompleteSemaphoreHandle;
+osStaticSemaphoreDef_t i2cTxCompleteControlBlock;
+const osSemaphoreAttr_t i2cTxCompleteSemaphore_attributes = {
+  .name = "i2cTxCompleteSemaphore",
+  .cb_mem = &i2cTxCompleteControlBlock,
+  .cb_size = sizeof(i2cTxCompleteControlBlock),
+};
+/* Definitions for i2cRxCompleteSemaphore */
+osSemaphoreId_t i2cRxCompleteSemaphoreHandle;
+osStaticSemaphoreDef_t i2cRxCompleteSemaphoreControlBlock;
+const osSemaphoreAttr_t i2cRxCompleteSemaphore_attributes = {
+  .name = "i2cRxCompleteSemaphore",
+  .cb_mem = &i2cRxCompleteSemaphoreControlBlock,
+  .cb_size = sizeof(i2cRxCompleteSemaphoreControlBlock),
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -109,6 +147,7 @@ const osTimerAttr_t Timer1kHz_attributes = {
 
 void StartDefaultTask(void *argument);
 extern void g_SoundTask(void *argument);
+extern void g_TofRangingTask(void *argument);
 void Timer1kHzCallback(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -126,6 +165,16 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* creation of measurementTriggerSemaphore */
+  measurementTriggerSemaphoreHandle = osSemaphoreNew(1, 0, &measurementTriggerSemaphore_attributes);
+
+  /* creation of i2cTxCompleteSemaphore */
+  i2cTxCompleteSemaphoreHandle = osSemaphoreNew(1, 0, &i2cTxCompleteSemaphore_attributes);
+
+  /* creation of i2cRxCompleteSemaphore */
+  i2cRxCompleteSemaphoreHandle = osSemaphoreNew(1, 0, &i2cRxCompleteSemaphore_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -154,6 +203,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of soundTask */
   soundTaskHandle = osThreadNew(g_SoundTask, NULL, &soundTask_attributes);
 
+  /* creation of tofRangingTask */
+  tofRangingTaskHandle = osThreadNew(g_TofRangingTask, NULL, &tofRangingTask_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -174,29 +226,10 @@ void MX_FREERTOS_Init(void) {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
-  VL53L4CD_Result_t result = {0};
-  VL53L4CD_ProfileConfig_t tofConfig = {0};
-  
-  tofConfig.RangingProfile = VL53L4CD_PROFILE_CONTINUOUS;
-  tofConfig.TimingBudget   = 10;
-  tofConfig.Frequency      = 0;
-  tofConfig.EnableAmbient  = 0;
-  tofConfig.EnableSignal   = 0;
 
   HAL_GPIO_WritePin(SPI1_CS_ENC_L_GPIO_Port, SPI1_CS_ENC_L_Pin, SET);
   HAL_GPIO_WritePin(SPI1_CS_ENC_R_GPIO_Port, SPI1_CS_ENC_R_Pin, SET);
   HAL_GPIO_WritePin(SPI1_CS_IMU_GPIO_Port, SPI1_CS_IMU_Pin, SET);
-
-  CUSTOM_RANGING_SENSOR_Init(TOF_INSTANCE_L);
-  CUSTOM_RANGING_SENSOR_Init(TOF_INSTANCE_C);
-  CUSTOM_RANGING_SENSOR_Init(TOF_INSTANCE_R);
-  CUSTOM_RANGING_SENSOR_ConfigProfile(TOF_INSTANCE_L, &tofConfig);
-  CUSTOM_RANGING_SENSOR_ConfigProfile(TOF_INSTANCE_C, &tofConfig);
-  CUSTOM_RANGING_SENSOR_ConfigProfile(TOF_INSTANCE_R, &tofConfig);
-  CUSTOM_RANGING_SENSOR_Start(TOF_INSTANCE_L, VL53L4CD_MODE_ASYNC_CONTINUOUS);
-  CUSTOM_RANGING_SENSOR_Start(TOF_INSTANCE_C, VL53L4CD_MODE_ASYNC_CONTINUOUS);
-  CUSTOM_RANGING_SENSOR_Start(TOF_INSTANCE_R, VL53L4CD_MODE_ASYNC_CONTINUOUS);
-  osTimerStart(Timer1kHzHandle, 1); // 1ms Timer start
 
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
@@ -204,17 +237,13 @@ void StartDefaultTask(void *argument)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 
   g_SoundInit();
+
+  osTimerStart(Timer1kHzHandle, 1); // 1ms Timer start
   
   static uint8_t sendbuff[128] = {0};
   /* Infinite loop */
   for(;;)
   {
-    CUSTOM_RANGING_SENSOR_GetDistance(TOF_INSTANCE_L, &result);
-    g_sensor.range_l = result.ZoneResult[0].Distance[0];
-    CUSTOM_RANGING_SENSOR_GetDistance(TOF_INSTANCE_C, &result);
-    g_sensor.range_f = result.ZoneResult[0].Distance[0];
-    CUSTOM_RANGING_SENSOR_GetDistance(TOF_INSTANCE_R, &result);
-    g_sensor.range_r = result.ZoneResult[0].Distance[0];
 
     // sprintf(sendbuff, "ax:%d,ay:%d,az:%d,gx:%d,gy:%d,gz:%d,er:%d,el:%d\n",
     //   g_sensor.acc_x ,
@@ -237,7 +266,7 @@ void StartDefaultTask(void *argument)
 
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 500);
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 500);
-    osDelay(10);
+    osDelay(1000);
     // HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_2);
 
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 1300);
@@ -253,8 +282,6 @@ void StartDefaultTask(void *argument)
 void Timer1kHzCallback(void *argument)
 {
   /* USER CODE BEGIN Timer1kHzCallback */
-
-
   static int counter = 0;
   SPIReadDescriptor* device = &g_SPICommDevice[SPIORDER_FIRST];
 
@@ -268,7 +295,7 @@ void Timer1kHzCallback(void *argument)
 
   if(counter == 0)
   { /* I2C */
-
+    osSemaphoreRelease(measurementTriggerSemaphoreHandle);
   }
   counter++; counter %= 10;
   /* USER CODE END Timer1kHzCallback */

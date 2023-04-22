@@ -19,6 +19,9 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "custom_bus.h"
+#include "FreeRTOS.h"
+#include "cmsis_os2.h"
+#include "app_freertos.h"
 
 __weak HAL_StatusTypeDef MX_I2C2_Init(I2C_HandleTypeDef* hi2c);
 
@@ -347,6 +350,9 @@ int32_t BSP_I2C2_Send_DMA(uint16_t DevAddr, uint8_t *pData, uint16_t Length)
   {
       ret = BSP_ERROR_UNKNOWN_FAILURE;
   }
+
+  osSemaphoreAcquire(i2cTxCompleteSemaphoreHandle, BUS_I2C2_POLL_TIMEOUT);
+
   return ret;
 }
 /**
@@ -363,6 +369,9 @@ int32_t  BSP_I2C2_Recv_DMA(uint16_t DevAddr, uint8_t *pData, uint16_t Length)
   {
       ret = BSP_ERROR_UNKNOWN_FAILURE;
   }
+
+  osSemaphoreAcquire(i2cRxCompleteSemaphoreHandle, BUS_I2C2_POLL_TIMEOUT);
+
   return ret;
 }
 
@@ -527,6 +536,9 @@ static void I2C2_MspInit(I2C_HandleTypeDef* i2cHandle)
 
   __HAL_LINKDMA(i2cHandle,hdmatx,hdma_i2c2_tx);
 
+    /* Peripheral interrupt init */
+    HAL_NVIC_SetPriority(I2C2_EV_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(I2C2_EV_IRQn);
   /* USER CODE BEGIN I2C2_MspInit 1 */
 
   /* USER CODE END I2C2_MspInit 1 */
@@ -551,6 +563,10 @@ static void I2C2_MspDeInit(I2C_HandleTypeDef* i2cHandle)
     /* Peripheral DMA DeInit*/
     HAL_DMA_DeInit(i2cHandle->hdmarx);
     HAL_DMA_DeInit(i2cHandle->hdmatx);
+
+    /* Peripheral interrupt Deinit*/
+    HAL_NVIC_DisableIRQ(I2C2_EV_IRQn);
+
   /* USER CODE BEGIN I2C2_MspDeInit 1 */
 
   /* USER CODE END I2C2_MspDeInit 1 */
@@ -572,3 +588,24 @@ static void I2C2_MspDeInit(I2C_HandleTypeDef* i2cHandle)
   * @}
   */
 
+/**
+  * @brief  Master Tx Transfer completed callback.
+  * @param  hi2c Pointer to a I2C_HandleTypeDef structure that contains
+  *                the configuration information for the specified I2C.
+  * @retval None
+  */
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+  osSemaphoreRelease(i2cTxCompleteSemaphoreHandle);
+}
+
+/**
+  * @brief  Master Rx Transfer completed callback.
+  * @param  hi2c Pointer to a I2C_HandleTypeDef structure that contains
+  *                the configuration information for the specified I2C.
+  * @retval None
+  */
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+  osSemaphoreRelease(i2cRxCompleteSemaphoreHandle);
+}

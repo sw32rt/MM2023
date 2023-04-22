@@ -38,8 +38,8 @@ extern "C" {
 
 #define CUSTOM_VL53L4CD_I2C_Init      BSP_I2C2_Init
 #define CUSTOM_VL53L4CD_I2C_DeInit    BSP_I2C2_DeInit
-#define CUSTOM_VL53L4CD_I2C_WriteReg  BSP_I2C2_Send
-#define CUSTOM_VL53L4CD_I2C_ReadReg   BSP_I2C2_Recv
+#define CUSTOM_VL53L4CD_I2C_WriteReg  BSP_I2C2_Send_DMA
+#define CUSTOM_VL53L4CD_I2C_ReadReg   BSP_I2C2_Recv_DMA
 
 
 #ifdef __cplusplus
