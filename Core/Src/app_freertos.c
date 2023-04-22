@@ -292,6 +292,15 @@ void Timer1kHzCallback(void *argument)
 
   HAL_GPIO_WritePin(device->GPIOx, device->GPIOPin, RESET);
   HAL_SPI_TransmitReceive_DMA(&hspi1, device->TxData, device->RxData, device->TxRxBytes);
+  if(READ_BIT(hspi1.ErrorCode, HAL_SPI_ERROR_DMA))
+  {
+    hspi1.hdmatx->Lock = HAL_UNLOCKED;
+    hspi1.hdmatx->State = HAL_DMA_STATE_READY;
+    hspi1.hdmarx->Lock = HAL_UNLOCKED;
+    hspi1.hdmarx->State = HAL_DMA_STATE_READY;
+    HAL_SPI_TransmitReceive_DMA(&hspi1, device->TxData, device->RxData, device->TxRxBytes);
+
+  }
 
   if(counter == 0)
   { /* I2C */

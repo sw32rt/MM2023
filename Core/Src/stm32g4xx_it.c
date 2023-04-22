@@ -210,12 +210,12 @@ void DMA1_Channel1_IRQHandler(void)
   if(SpiOrder == SPIORDER_FIRST)
   {
     SpiOrder++;
-    g_sensor.acc_x  = *(uint16_t*)&(g_SPICommDevice[SPIORDER_IMU].RxData[0]);
-    g_sensor.acc_y  = *(uint16_t*)&(g_SPICommDevice[SPIORDER_IMU].RxData[2]);
-    g_sensor.acc_z  = *(uint16_t*)&(g_SPICommDevice[SPIORDER_IMU].RxData[4]);
-    g_sensor.gyro_x = *(uint16_t*)&(g_SPICommDevice[SPIORDER_IMU].RxData[6]);
-    g_sensor.gyro_y = *(uint16_t*)&(g_SPICommDevice[SPIORDER_IMU].RxData[8]);
-    g_sensor.gyro_z = *(uint16_t*)&(g_SPICommDevice[SPIORDER_IMU].RxData[10]);
+    g_sensor.acc_x  = g_SPICommDevice[SPIORDER_IMU].RxData[2] | g_SPICommDevice[SPIORDER_IMU].RxData[1] << 8;
+    g_sensor.acc_y  = g_SPICommDevice[SPIORDER_IMU].RxData[4] | g_SPICommDevice[SPIORDER_IMU].RxData[3] << 8;
+    g_sensor.acc_z  = g_SPICommDevice[SPIORDER_IMU].RxData[6] | g_SPICommDevice[SPIORDER_IMU].RxData[5] << 8;
+    g_sensor.gyro_x = g_SPICommDevice[SPIORDER_IMU].RxData[10] | g_SPICommDevice[SPIORDER_IMU].RxData[9] << 8;
+    g_sensor.gyro_y = g_SPICommDevice[SPIORDER_IMU].RxData[12] | g_SPICommDevice[SPIORDER_IMU].RxData[11] << 8;
+    g_sensor.gyro_z = g_SPICommDevice[SPIORDER_IMU].RxData[14] | g_SPICommDevice[SPIORDER_IMU].RxData[13] << 8;
     g_SPICommDevice[SPIORDER_ENC_R].RxData[0] &= 0x3F;
     g_sensor.enc_r  = g_SPICommDevice[SPIORDER_ENC_R].RxData[1] | g_SPICommDevice[SPIORDER_ENC_R].RxData[0] << 8;
     g_SPICommDevice[SPIORDER_ENC_L].RxData[0] &= 0x3F;

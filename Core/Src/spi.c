@@ -37,18 +37,20 @@ SPIReadDescriptor g_SPICommDevice[] =
       ACCEL_YOUT_L | FLAG_READ, 
       ACCEL_ZOUT_H | FLAG_READ, 
       ACCEL_ZOUT_L | FLAG_READ, 
+      TEMP_OUT_H   | FLAG_READ, 
+      TEMP_OUT_L   | FLAG_READ, 
       GYRO_XOUT_H  | FLAG_READ, 
       GYRO_XOUT_L  | FLAG_READ, 
       GYRO_YOUT_H  | FLAG_READ, 
       GYRO_YOUT_L  | FLAG_READ, 
-      GYRO_ZOUT_H  | FLAG_READ, 
-      GYRO_ZOUT_L  | FLAG_READ, 
-      0x00,
+      GYRO_ZOUT_H  | FLAG_READ,  
+      GYRO_ZOUT_L  | FLAG_READ,  
+      0x00 | FLAG_READ,
 
 
     },
     .RxData = {0},
-    .TxRxBytes = 13,
+    .TxRxBytes = 15,
   },
 
   [SPIORDER_ENC_R    ] = {
