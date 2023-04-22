@@ -435,15 +435,19 @@ void soundOut(uint16_t period);
   */
 void g_SoundTask(void *argument)
 {
+    osStatus_t err = 0;
     scoreIndex Index;
 
     while(1)
     {
-        osMessageQueueGet(soundQueueHandle, &Index, NULL, 0);
-        for(int iterator = 0; iterator < score[Index].length; iterator++)
+        err = osMessageQueueGet(soundQueueHandle, &Index, NULL, osWaitForever);
+        if (err == osOK)
         {
-            soundOut(score[Index].pScore[iterator]);
-            osDelay(UPDATE_RETE);
+            for(int iterator = 0; iterator < score[Index].length; iterator++)
+            {
+                soundOut(score[Index].pScore[iterator]);
+                osDelay(UPDATE_RETE);
+            }
         }
     }
 }

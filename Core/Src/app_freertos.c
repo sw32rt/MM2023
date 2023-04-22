@@ -56,7 +56,6 @@ typedef StaticTimer_t osStaticTimerDef_t;
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-    static volatile uint16_t g_getData = 0;
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -85,7 +84,7 @@ const osThreadAttr_t soundTask_attributes = {
 };
 /* Definitions for soundQueue */
 osMessageQueueId_t soundQueueHandle;
-uint8_t soundQueueBuffer[ 2 * sizeof( intptr_t ) ];
+uint8_t soundQueueBuffer[ 2 * sizeof( scoreIndex ) ];
 osStaticMessageQDef_t soundQueueControlBlock;
 const osMessageQueueAttr_t soundQueue_attributes = {
   .name = "soundQueue",
@@ -142,7 +141,7 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the queue(s) */
   /* creation of soundQueue */
-  soundQueueHandle = osMessageQueueNew (2, sizeof(intptr_t), &soundQueue_attributes);
+  soundQueueHandle = osMessageQueueNew (2, sizeof(scoreIndex), &soundQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
@@ -176,6 +175,13 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
   VL53L4CD_Result_t result = {0};
+  VL53L4CD_ProfileConfig_t tofConfig = {0};
+  
+  tofConfig.RangingProfile = VL53L4CD_PROFILE_CONTINUOUS;
+  tofConfig.TimingBudget   = 10;
+  tofConfig.Frequency      = 0;
+  tofConfig.EnableAmbient  = 0;
+  tofConfig.EnableSignal   = 0;
 
   HAL_GPIO_WritePin(SPI1_CS_ENC_L_GPIO_Port, SPI1_CS_ENC_L_Pin, SET);
   HAL_GPIO_WritePin(SPI1_CS_ENC_R_GPIO_Port, SPI1_CS_ENC_R_Pin, SET);
@@ -184,10 +190,13 @@ void StartDefaultTask(void *argument)
   CUSTOM_RANGING_SENSOR_Init(TOF_INSTANCE_L);
   CUSTOM_RANGING_SENSOR_Init(TOF_INSTANCE_C);
   CUSTOM_RANGING_SENSOR_Init(TOF_INSTANCE_R);
+  CUSTOM_RANGING_SENSOR_ConfigProfile(TOF_INSTANCE_L, &tofConfig);
+  CUSTOM_RANGING_SENSOR_ConfigProfile(TOF_INSTANCE_C, &tofConfig);
+  CUSTOM_RANGING_SENSOR_ConfigProfile(TOF_INSTANCE_R, &tofConfig);
   CUSTOM_RANGING_SENSOR_Start(TOF_INSTANCE_L, VL53L4CD_MODE_ASYNC_CONTINUOUS);
   CUSTOM_RANGING_SENSOR_Start(TOF_INSTANCE_C, VL53L4CD_MODE_ASYNC_CONTINUOUS);
   CUSTOM_RANGING_SENSOR_Start(TOF_INSTANCE_R, VL53L4CD_MODE_ASYNC_CONTINUOUS);
-  osTimerStart(Timer1kHzHandle, 20); // 1ms Timer start
+  osTimerStart(Timer1kHzHandle, 1); // 1ms Timer start
 
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 0);
   __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 0);
@@ -224,11 +233,11 @@ void StartDefaultTask(void *argument)
 //    );
 
 
-    HAL_UART_Transmit_DMA(&huart1, sendbuff, 100);
+    // HAL_UART_Transmit_DMA(&huart1, sendbuff, 100);
 
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 500);
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 500);
-    osDelay(100);
+    osDelay(10);
     // HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_2);
 
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 1300);
@@ -236,17 +245,6 @@ void StartDefaultTask(void *argument)
     // HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
     // HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);
 
-#if 0
-    tx_data[0] = 0x3F | 0x40;
-    tx_data[1] = 0xFF;
-    osDelay(100);
-    HAL_GPIO_WritePin(SPI1_CS_ENC_L_GPIO_Port, SPI1_CS_ENC_L_Pin, RESET);
-    HAL_SPI_TransmitReceive_DMA(&hspi1, tx_data, rx_data, 2);
-    osDelay(1);
-    HAL_GPIO_WritePin(SPI1_CS_ENC_L_GPIO_Port, SPI1_CS_ENC_L_Pin, SET);
-  g_getData = (rx_data[1] | rx_data[0] << 8) & 0b0011111111111111;
-  (void)g_getData;
-#endif
   }
   /* USER CODE END StartDefaultTask */
 }
@@ -267,9 +265,6 @@ void Timer1kHzCallback(void *argument)
 
   HAL_GPIO_WritePin(device->GPIOx, device->GPIOPin, RESET);
   HAL_SPI_TransmitReceive_DMA(&hspi1, device->TxData, device->RxData, device->TxRxBytes);
-  //g_getData = (g_rx_data[1] | g_rx_data[0] << 8) & 0b0011111111111111;
-  (void)g_getData;
-
 
   if(counter == 0)
   { /* I2C */
