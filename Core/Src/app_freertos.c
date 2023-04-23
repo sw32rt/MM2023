@@ -107,6 +107,17 @@ const osMessageQueueAttr_t soundQueue_attributes = {
   .mq_mem = &soundQueueBuffer,
   .mq_size = sizeof(soundQueueBuffer)
 };
+/* Definitions for logQueue */
+osMessageQueueId_t logQueueHandle;
+uint8_t logQueueBuffer[ 2 * sizeof( uint32_t* ) ];
+osStaticMessageQDef_t logQueueControlBlock;
+const osMessageQueueAttr_t logQueue_attributes = {
+  .name = "logQueue",
+  .cb_mem = &logQueueControlBlock,
+  .cb_size = sizeof(logQueueControlBlock),
+  .mq_mem = &logQueueBuffer,
+  .mq_size = sizeof(logQueueBuffer)
+};
 /* Definitions for Timer1kHz */
 osTimerId_t Timer1kHzHandle;
 osStaticTimerDef_t Timer_1kHzControlBlock;
@@ -191,6 +202,9 @@ void MX_FREERTOS_Init(void) {
   /* Create the queue(s) */
   /* creation of soundQueue */
   soundQueueHandle = osMessageQueueNew (2, sizeof(scoreIndex), &soundQueue_attributes);
+
+  /* creation of logQueue */
+  logQueueHandle = osMessageQueueNew (2, sizeof(uint32_t*), &logQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */

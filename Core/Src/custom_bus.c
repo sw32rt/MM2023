@@ -19,9 +19,11 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "custom_bus.h"
+  /* USER CODE BEGIN includes */
 #include "FreeRTOS.h"
 #include "cmsis_os2.h"
 #include "app_freertos.h"
+  /* USER CODE END includes */
 
 __weak HAL_StatusTypeDef MX_I2C2_Init(I2C_HandleTypeDef* hi2c);
 
@@ -350,8 +352,9 @@ int32_t BSP_I2C2_Send_DMA(uint16_t DevAddr, uint8_t *pData, uint16_t Length)
   {
       ret = BSP_ERROR_UNKNOWN_FAILURE;
   }
-
+  /* USER CODE BEGIN */
   osSemaphoreAcquire(i2cTxCompleteSemaphoreHandle, BUS_I2C2_POLL_TIMEOUT);
+  /* USER CODE END */
 
   return ret;
 }
@@ -369,8 +372,9 @@ int32_t  BSP_I2C2_Recv_DMA(uint16_t DevAddr, uint8_t *pData, uint16_t Length)
   {
       ret = BSP_ERROR_UNKNOWN_FAILURE;
   }
-
+  /* USER CODE BEGIN */
   osSemaphoreAcquire(i2cRxCompleteSemaphoreHandle, BUS_I2C2_POLL_TIMEOUT);
+  /* USER CODE END */
 
   return ret;
 }
@@ -588,6 +592,8 @@ static void I2C2_MspDeInit(I2C_HandleTypeDef* i2cHandle)
   * @}
   */
 
+/* USER CODE BEGIN app */
+
 /**
   * @brief  Master Tx Transfer completed callback.
   * @param  hi2c Pointer to a I2C_HandleTypeDef structure that contains
@@ -609,3 +615,4 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
   osSemaphoreRelease(i2cRxCompleteSemaphoreHandle);
 }
+/* USER CODE END app */
