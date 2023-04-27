@@ -32,9 +32,10 @@
 #include "custom_ranging_sensor.h"
 #include "sensor.h"
 #include "tof.h"
-#include "stdio.h"
-
+#include "log.h"
 #include "sound.h"
+
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -96,6 +97,42 @@ const osThreadAttr_t tofRangingTask_attributes = {
   .cb_size = sizeof(tofRangingTaskControlBlock),
   .priority = (osPriority_t) osPriorityHigh,
 };
+/* Definitions for logTask */
+osThreadId_t logTaskHandle;
+uint32_t logTaskBuffer[ 128 ];
+osStaticThreadDef_t logTaskControlBlock;
+const osThreadAttr_t logTask_attributes = {
+  .name = "logTask",
+  .stack_mem = &logTaskBuffer[0],
+  .stack_size = sizeof(logTaskBuffer),
+  .cb_mem = &logTaskControlBlock,
+  .cb_size = sizeof(logTaskControlBlock),
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for uartRecvTask */
+osThreadId_t uartRecvTaskHandle;
+uint32_t uartRecvTaskBuffer[ 128 ];
+osStaticThreadDef_t uartRecvTaskControlBlock;
+const osThreadAttr_t uartRecvTask_attributes = {
+  .name = "uartRecvTask",
+  .stack_mem = &uartRecvTaskBuffer[0],
+  .stack_size = sizeof(uartRecvTaskBuffer),
+  .cb_mem = &uartRecvTaskControlBlock,
+  .cb_size = sizeof(uartRecvTaskControlBlock),
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for uartSendTask */
+osThreadId_t uartSendTaskHandle;
+uint32_t uartSendTaskBuffer[ 128 ];
+osStaticThreadDef_t uartSendTaskControlBlock;
+const osThreadAttr_t uartSendTask_attributes = {
+  .name = "uartSendTask",
+  .stack_mem = &uartSendTaskBuffer[0],
+  .stack_size = sizeof(uartSendTaskBuffer),
+  .cb_mem = &uartSendTaskControlBlock,
+  .cb_size = sizeof(uartSendTaskControlBlock),
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* Definitions for soundQueue */
 osMessageQueueId_t soundQueueHandle;
 uint8_t soundQueueBuffer[ 2 * sizeof( scoreIndex ) ];
@@ -117,6 +154,28 @@ const osMessageQueueAttr_t logQueue_attributes = {
   .cb_size = sizeof(logQueueControlBlock),
   .mq_mem = &logQueueBuffer,
   .mq_size = sizeof(logQueueBuffer)
+};
+/* Definitions for uartRecvQueue */
+osMessageQueueId_t uartRecvQueueHandle;
+uint8_t uartRecvQueueBuffer[ 3 * sizeof( packet_t* ) ];
+osStaticMessageQDef_t uartRecvQueueControlBlock;
+const osMessageQueueAttr_t uartRecvQueue_attributes = {
+  .name = "uartRecvQueue",
+  .cb_mem = &uartRecvQueueControlBlock,
+  .cb_size = sizeof(uartRecvQueueControlBlock),
+  .mq_mem = &uartRecvQueueBuffer,
+  .mq_size = sizeof(uartRecvQueueBuffer)
+};
+/* Definitions for uartSendQueue */
+osMessageQueueId_t uartSendQueueHandle;
+uint8_t uartSendQueueBuffer[ 1 * sizeof( packet_t* ) ];
+osStaticMessageQDef_t uartSendQueueControlBlock;
+const osMessageQueueAttr_t uartSendQueue_attributes = {
+  .name = "uartSendQueue",
+  .cb_mem = &uartSendQueueControlBlock,
+  .cb_size = sizeof(uartSendQueueControlBlock),
+  .mq_mem = &uartSendQueueBuffer,
+  .mq_size = sizeof(uartSendQueueBuffer)
 };
 /* Definitions for Timer1kHz */
 osTimerId_t Timer1kHzHandle;
@@ -150,6 +209,14 @@ const osSemaphoreAttr_t i2cRxCompleteSemaphore_attributes = {
   .cb_mem = &i2cRxCompleteSemaphoreControlBlock,
   .cb_size = sizeof(i2cRxCompleteSemaphoreControlBlock),
 };
+/* Definitions for logTriggerSemaphore */
+osSemaphoreId_t logTriggerSemaphoreHandle;
+osStaticSemaphoreDef_t logTriggerSemaphoreControlBlock;
+const osSemaphoreAttr_t logTriggerSemaphore_attributes = {
+  .name = "logTriggerSemaphore",
+  .cb_mem = &logTriggerSemaphoreControlBlock,
+  .cb_size = sizeof(logTriggerSemaphoreControlBlock),
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -159,6 +226,9 @@ const osSemaphoreAttr_t i2cRxCompleteSemaphore_attributes = {
 void StartDefaultTask(void *argument);
 extern void g_SoundTask(void *argument);
 extern void g_TofRangingTask(void *argument);
+extern void g_LogTask(void *argument);
+extern void g_UartRecvTask(void *argument);
+extern void g_UartSendTask(void *argument);
 void Timer1kHzCallback(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -187,6 +257,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of i2cRxCompleteSemaphore */
   i2cRxCompleteSemaphoreHandle = osSemaphoreNew(1, 0, &i2cRxCompleteSemaphore_attributes);
 
+  /* creation of logTriggerSemaphore */
+  logTriggerSemaphoreHandle = osSemaphoreNew(1, 0, &logTriggerSemaphore_attributes);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -206,6 +279,12 @@ void MX_FREERTOS_Init(void) {
   /* creation of logQueue */
   logQueueHandle = osMessageQueueNew (2, sizeof(uint32_t*), &logQueue_attributes);
 
+  /* creation of uartRecvQueue */
+  uartRecvQueueHandle = osMessageQueueNew (3, sizeof(packet_t*), &uartRecvQueue_attributes);
+
+  /* creation of uartSendQueue */
+  uartSendQueueHandle = osMessageQueueNew (1, sizeof(packet_t*), &uartSendQueue_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -219,6 +298,15 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of tofRangingTask */
   tofRangingTaskHandle = osThreadNew(g_TofRangingTask, NULL, &tofRangingTask_attributes);
+
+  /* creation of logTask */
+  logTaskHandle = osThreadNew(g_LogTask, NULL, &logTask_attributes);
+
+  /* creation of uartRecvTask */
+  uartRecvTaskHandle = osThreadNew(g_UartRecvTask, NULL, &uartRecvTask_attributes);
+
+  /* creation of uartSendTask */
+  uartSendTaskHandle = osThreadNew(g_UartSendTask, NULL, &uartSendTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -255,6 +343,13 @@ void StartDefaultTask(void *argument)
   osTimerStart(Timer1kHzHandle, 1); // 1ms Timer start
   
   static uint8_t sendbuff[128] = {0};
+
+  osDelay(1000);
+  eraseFlash();
+  osThreadResume(logTaskHandle);
+  HAL_GPIO_WritePin(LED_0_GPIO_Port, LED_0_Pin, 1);
+
+
   /* Infinite loop */
   for(;;)
   {
@@ -276,18 +371,16 @@ void StartDefaultTask(void *argument)
 //    );
 
 
-    // HAL_UART_Transmit_DMA(&huart1, sendbuff, 100);
+    HAL_UART_Transmit_DMA(&huart1, sendbuff, 100);
 
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 500);
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 500);
-    osDelay(1000);
     // HAL_TIM_PWM_Stop(&htim8, TIM_CHANNEL_2);
 
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 1300);
-    // osDelay(1000);
+    osDelay(1000);
     // HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
     // HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_2);
-
   }
   /* USER CODE END StartDefaultTask */
 }

@@ -36,6 +36,12 @@ extern UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN Private defines */
 
+#define PACKET_DATA_SIZE 1024
+
+typedef struct {
+  uint8_t data[PACKET_DATA_SIZE];
+  uint16_t size;
+}packet_t;
 /* USER CODE END Private defines */
 
 void MX_USART1_UART_Init(void);

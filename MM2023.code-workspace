@@ -16,7 +16,10 @@
 			"spi.h": "c",
 			"custom_bus.h": "c",
 			"custom_conf.h": "c",
-			"vl53l4cd.h": "c"
-		}
+			"vl53l4cd.h": "c",
+			"sensors.h": "c",
+			"log.h": "c"
+		},
+		"files.encoding": "utf8"
 	}
 }

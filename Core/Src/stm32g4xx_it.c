@@ -24,6 +24,8 @@
 #include "task.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "cmsis_os.h"
+#include "app_freertos.h"
 #include "spi.h"
 #include "sensor.h"
 /* USER CODE END Includes */
@@ -234,6 +236,8 @@ void DMA1_Channel1_IRQHandler(void)
     g_sensor.enc_r  = g_SPICommDevice[SPIORDER_ENC_R].RxData[1] | g_SPICommDevice[SPIORDER_ENC_R].RxData[0] << 8;
     g_SPICommDevice[SPIORDER_ENC_L].RxData[0] &= 0x3F;
     g_sensor.enc_l  = g_SPICommDevice[SPIORDER_ENC_L].RxData[1] | g_SPICommDevice[SPIORDER_ENC_L].RxData[0] << 8;
+    osSemaphoreRelease(logTriggerSemaphoreHandle);
+
     return;
   }
 

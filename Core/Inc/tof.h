@@ -1,7 +1,7 @@
 #ifndef TOF_H_
 #define TOF_H_
 
-extern void g_TofRangingTask(void *argument);
+void g_TofRangingTask(void *argument);
 
 
 
