@@ -133,6 +133,18 @@ const osThreadAttr_t uartSendTask_attributes = {
   .cb_size = sizeof(uartSendTaskControlBlock),
   .priority = (osPriority_t) osPriorityLow,
 };
+/* Definitions for uartCommandTask */
+osThreadId_t uartCommandTaskHandle;
+uint32_t uartCommandTaskBuffer[ 128 ];
+osStaticThreadDef_t uartCommandTaskControlBlock;
+const osThreadAttr_t uartCommandTask_attributes = {
+  .name = "uartCommandTask",
+  .stack_mem = &uartCommandTaskBuffer[0],
+  .stack_size = sizeof(uartCommandTaskBuffer),
+  .cb_mem = &uartCommandTaskControlBlock,
+  .cb_size = sizeof(uartCommandTaskControlBlock),
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* Definitions for soundQueue */
 osMessageQueueId_t soundQueueHandle;
 uint8_t soundQueueBuffer[ 2 * sizeof( scoreIndex ) ];
@@ -217,6 +229,22 @@ const osSemaphoreAttr_t logTriggerSemaphore_attributes = {
   .cb_mem = &logTriggerSemaphoreControlBlock,
   .cb_size = sizeof(logTriggerSemaphoreControlBlock),
 };
+/* Definitions for uartRecvCompleteSemaphore */
+osSemaphoreId_t uartRecvCompleteSemaphoreHandle;
+osStaticSemaphoreDef_t uartRecvCompleteSemaphoreControlBlock;
+const osSemaphoreAttr_t uartRecvCompleteSemaphore_attributes = {
+  .name = "uartRecvCompleteSemaphore",
+  .cb_mem = &uartRecvCompleteSemaphoreControlBlock,
+  .cb_size = sizeof(uartRecvCompleteSemaphoreControlBlock),
+};
+/* Definitions for uartSendCompleteSemaphore */
+osSemaphoreId_t uartSendCompleteSemaphoreHandle;
+osStaticSemaphoreDef_t uartSendCompleteSemaphoreControlBlock;
+const osSemaphoreAttr_t uartSendCompleteSemaphore_attributes = {
+  .name = "uartSendCompleteSemaphore",
+  .cb_mem = &uartSendCompleteSemaphoreControlBlock,
+  .cb_size = sizeof(uartSendCompleteSemaphoreControlBlock),
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -229,6 +257,7 @@ extern void g_TofRangingTask(void *argument);
 extern void g_LogTask(void *argument);
 extern void g_UartRecvTask(void *argument);
 extern void g_UartSendTask(void *argument);
+extern void g_UartCommandTask(void *argument);
 void Timer1kHzCallback(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -259,6 +288,12 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of logTriggerSemaphore */
   logTriggerSemaphoreHandle = osSemaphoreNew(1, 0, &logTriggerSemaphore_attributes);
+
+  /* creation of uartRecvCompleteSemaphore */
+  uartRecvCompleteSemaphoreHandle = osSemaphoreNew(1, 0, &uartRecvCompleteSemaphore_attributes);
+
+  /* creation of uartSendCompleteSemaphore */
+  uartSendCompleteSemaphoreHandle = osSemaphoreNew(1, 0, &uartSendCompleteSemaphore_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -307,6 +342,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of uartSendTask */
   uartSendTaskHandle = osThreadNew(g_UartSendTask, NULL, &uartSendTask_attributes);
+
+  /* creation of uartCommandTask */
+  uartCommandTaskHandle = osThreadNew(g_UartCommandTask, NULL, &uartCommandTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

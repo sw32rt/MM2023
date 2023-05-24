@@ -21,6 +21,11 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "main.h"
+#include "cmsis_os.h"
+#include "app_freertos.h"
 
 /* USER CODE END 0 */
 
@@ -182,5 +187,60 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
+
+/**
+  * @brief  uart recv task
+  * @param  argument : not used
+  * @retval None
+  */
+void g_UartRecvTask(void *argument)
+{
+  while(1)
+  {
+    HAL_UART_Receive_DMA(&huart1, sendbuff, 100);
+    if(osSemaphoreAcquire(uartRecvCompleteSemaphoreHandle, osWaitForever) == osOK)
+    {
+      osMessageQueuePut(uartRecvQueueHandle, recvPacket, , osWaitForever);
+    }
+
+  }
+}
+
+/**
+  * @brief  uart send task
+  * @param  argument : not used
+  * @retval None
+  */
+void g_UartSendTask(void *argument)
+{
+  while (1)
+  {
+      osMessageQueueGet(uartSendQueueHandle, recvPacket, NULL, osWaitForever);
+
+  }
+}
+
+/**
+  * @brief  uart command task
+  * @param  argument : not used
+  * @retval None
+  */
+void g_UartCommandTask(void *argument)
+{
+  while (1)
+  {
+    osMessageQueueGet(uartRecvQueueHandle, recvPacket, NULL, osWaitForever);
+
+    /* 解析 */
+
+
+    /* 応答 */
+    osMessageQueuePut(uartRecvQueueHandle, recvPacket, , osWaitForever);
+
+    
+  }
+  
+}
+
 
 /* USER CODE END 1 */
