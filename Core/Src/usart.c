@@ -26,6 +26,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "app_freertos.h"
+#include "stream_buffer.h"
 
 /* USER CODE END 0 */
 
@@ -195,12 +196,15 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
   */
 void g_UartRecvTask(void *argument)
 {
+  static uint8_t recvBuff[256];
+  size_t recvSize = 0;
+
   while(1)
   {
-    HAL_UART_Receive_DMA(&huart1, sendbuff, 100);
+    HAL_UART_Receive_DMA(&huart1, recvBuff, 100);
     if(osSemaphoreAcquire(uartRecvCompleteSemaphoreHandle, osWaitForever) == osOK)
     {
-      osMessageQueuePut(uartRecvQueueHandle, recvPacket, , osWaitForever);
+      xStreamBufferSend(uartRecvStreamBufferHandle, recvBuff, recvSize, osWaitForever);
     }
 
   }
@@ -213,10 +217,13 @@ void g_UartRecvTask(void *argument)
   */
 void g_UartSendTask(void *argument)
 {
+  static uint8_t sendBuff[256];
+  size_t sendSize = 0;
+
   while (1)
   {
-      osMessageQueueGet(uartSendQueueHandle, recvPacket, NULL, osWaitForever);
-
+      sendSize = xStreamBufferReceive(uartSendStreamBufferHandle, sendBuff, sizeof(sendBuff), osWaitForever);
+      HAL_UART_Transmit_DMA(&huart1, sendBuff, sendSize);
   }
 }
 
@@ -227,20 +234,34 @@ void g_UartSendTask(void *argument)
   */
 void g_UartCommandTask(void *argument)
 {
+  static uint8_t recvBuff[256];
+  static uint8_t sendBuff[256];
+  size_t recvSize = 0;
+  size_t sendSize = 0;
+
   while (1)
   {
-    osMessageQueueGet(uartRecvQueueHandle, recvPacket, NULL, osWaitForever);
+    recvSize = xStreamBufferReceive(uartRecvStreamBufferHandle, recvBuff, sizeof(recvBuff), osWaitForever);
 
     /* 解析 */
-
-
-    /* 応答 */
-    osMessageQueuePut(uartRecvQueueHandle, recvPacket, , osWaitForever);
-
-    
+    sendSize = uartCommandAnalysis(&recvBuff, &sendBuff);
+    if(sendSize > 0)
+    {
+      /* 応答 */
+      xStreamBufferSend(uartSendStreamBufferHandle, sendBuff, sendSize, osWaitForever);
+    }
   }
-  
 }
 
+/**
+  * @brief  uart command analysis
+  * @param  argument : not used
+  * @retval None
+  */
+void uartCommandAnalysis()
+{
+
+
+}
 
 /* USER CODE END 1 */

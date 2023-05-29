@@ -22,6 +22,7 @@
 #include "task.h"
 #include "main.h"
 #include "cmsis_os.h"
+#include "stream_buffer.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -49,7 +50,8 @@ typedef StaticSemaphore_t osStaticSemaphoreDef_t;
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define UART_RECV_STREAM_BUFFER_SIZE_BYTES 1023
+#define UART_SEND_STREAM_BUFFER_SIZE_BYTES 1023
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -59,6 +61,18 @@ typedef StaticSemaphore_t osStaticSemaphoreDef_t;
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
+
+/* Definitions for memoryPool */
+StreamBufferHandle_t uartRecvStreamBufferHandle;
+static uint8_t ucUartRecvStreamBufferStorage[ UART_RECV_STREAM_BUFFER_SIZE_BYTES + 1 ]; 
+StaticStreamBuffer_t uartRecvStreamBufferStruct;
+const size_t uartRecvTriggerLevel = 256; 
+
+StreamBufferHandle_t uartSendStreamBufferHandle;
+static uint8_t ucUartSendStreamBufferStorage[ UART_SEND_STREAM_BUFFER_SIZE_BYTES + 1 ]; 
+StaticStreamBuffer_t uartSendStreamBufferStruct;
+const size_t uartSendTriggerLevel = 256; 
+
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -270,6 +284,10 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
+  uartRecvStreamBufferHandle = xStreamBufferCreateStatic(UART_RECV_STREAM_BUFFER_SIZE_BYTES, uartRecvTriggerLevel, ucUartRecvStreamBufferStorage, uartRecvStreamBufferStruct);
+
+  uartSendStreamBufferHandle = xStreamBufferCreateStatic(UART_SEND_STREAM_BUFFER_SIZE_BYTES, uartSendTriggerLevel, ucUartSendStreamBufferStorage, uartSendStreamBufferStruct);
+  
   /* USER CODE END Init */
 
   /* USER CODE BEGIN RTOS_MUTEX */

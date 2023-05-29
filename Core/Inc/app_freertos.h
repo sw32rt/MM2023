@@ -1,6 +1,10 @@
 #ifndef APP_FREERTOS_H_
 #define APP_FREERTOS_H_
 
+/* stream buffer handles */
+extern StreamBufferHandle_t uartRecvStreamBufferHandle;
+extern StreamBufferHandle_t uartSendStreamBufferHandle;
+
 /* thread handles */
 extern osThreadId_t soundTaskHandle;
 extern osThreadId_t tofRangingTaskHandle;
