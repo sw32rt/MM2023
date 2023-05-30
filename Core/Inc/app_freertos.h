@@ -1,6 +1,8 @@
 #ifndef APP_FREERTOS_H_
 #define APP_FREERTOS_H_
 
+#include "stream_buffer.h"
+
 /* stream buffer handles */
 extern StreamBufferHandle_t uartRecvStreamBufferHandle;
 extern StreamBufferHandle_t uartSendStreamBufferHandle;

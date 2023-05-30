@@ -22,10 +22,10 @@
 #include "task.h"
 #include "main.h"
 #include "cmsis_os.h"
-#include "stream_buffer.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stream_buffer.h"
 #include "app_freertos.h"
 #include "spi.h"
 #include "tim.h"
@@ -181,28 +181,6 @@ const osMessageQueueAttr_t logQueue_attributes = {
   .mq_mem = &logQueueBuffer,
   .mq_size = sizeof(logQueueBuffer)
 };
-/* Definitions for uartRecvQueue */
-osMessageQueueId_t uartRecvQueueHandle;
-uint8_t uartRecvQueueBuffer[ 3 * sizeof( packet_t* ) ];
-osStaticMessageQDef_t uartRecvQueueControlBlock;
-const osMessageQueueAttr_t uartRecvQueue_attributes = {
-  .name = "uartRecvQueue",
-  .cb_mem = &uartRecvQueueControlBlock,
-  .cb_size = sizeof(uartRecvQueueControlBlock),
-  .mq_mem = &uartRecvQueueBuffer,
-  .mq_size = sizeof(uartRecvQueueBuffer)
-};
-/* Definitions for uartSendQueue */
-osMessageQueueId_t uartSendQueueHandle;
-uint8_t uartSendQueueBuffer[ 1 * sizeof( packet_t* ) ];
-osStaticMessageQDef_t uartSendQueueControlBlock;
-const osMessageQueueAttr_t uartSendQueue_attributes = {
-  .name = "uartSendQueue",
-  .cb_mem = &uartSendQueueControlBlock,
-  .cb_size = sizeof(uartSendQueueControlBlock),
-  .mq_mem = &uartSendQueueBuffer,
-  .mq_size = sizeof(uartSendQueueBuffer)
-};
 /* Definitions for Timer1kHz */
 osTimerId_t Timer1kHzHandle;
 osStaticTimerDef_t Timer_1kHzControlBlock;
@@ -284,9 +262,9 @@ void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
-  uartRecvStreamBufferHandle = xStreamBufferCreateStatic(UART_RECV_STREAM_BUFFER_SIZE_BYTES, uartRecvTriggerLevel, ucUartRecvStreamBufferStorage, uartRecvStreamBufferStruct);
+  uartRecvStreamBufferHandle = xStreamBufferCreateStatic(UART_RECV_STREAM_BUFFER_SIZE_BYTES, uartRecvTriggerLevel, ucUartRecvStreamBufferStorage, &uartRecvStreamBufferStruct);
 
-  uartSendStreamBufferHandle = xStreamBufferCreateStatic(UART_SEND_STREAM_BUFFER_SIZE_BYTES, uartSendTriggerLevel, ucUartSendStreamBufferStorage, uartSendStreamBufferStruct);
+  uartSendStreamBufferHandle = xStreamBufferCreateStatic(UART_SEND_STREAM_BUFFER_SIZE_BYTES, uartSendTriggerLevel, ucUartSendStreamBufferStorage, &uartSendStreamBufferStruct);
   
   /* USER CODE END Init */
 
@@ -331,12 +309,6 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of logQueue */
   logQueueHandle = osMessageQueueNew (2, sizeof(uint32_t*), &logQueue_attributes);
-
-  /* creation of uartRecvQueue */
-  uartRecvQueueHandle = osMessageQueueNew (3, sizeof(packet_t*), &uartRecvQueue_attributes);
-
-  /* creation of uartSendQueue */
-  uartSendQueueHandle = osMessageQueueNew (1, sizeof(packet_t*), &uartSendQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */

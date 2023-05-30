@@ -28,6 +28,11 @@
 #include "app_freertos.h"
 #include "stream_buffer.h"
 
+
+size_t uartCommandAnalysis(uint8_t* recvBuff, size_t recvSize, uint8_t* sendBuff);
+
+
+
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
@@ -189,6 +194,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 
 /* USER CODE BEGIN 1 */
 
+
 /**
   * @brief  uart recv task
   * @param  argument : not used
@@ -224,6 +230,10 @@ void g_UartSendTask(void *argument)
   {
       sendSize = xStreamBufferReceive(uartSendStreamBufferHandle, sendBuff, sizeof(sendBuff), osWaitForever);
       HAL_UART_Transmit_DMA(&huart1, sendBuff, sendSize);
+      if(osSemaphoreAcquire(uartSendCompleteSemaphoreHandle, osWaitForever) != osOK)
+      {
+        /* error */
+      }
   }
 }
 
@@ -244,7 +254,7 @@ void g_UartCommandTask(void *argument)
     recvSize = xStreamBufferReceive(uartRecvStreamBufferHandle, recvBuff, sizeof(recvBuff), osWaitForever);
 
     /* 解析 */
-    sendSize = uartCommandAnalysis(&recvBuff, &sendBuff);
+    sendSize = uartCommandAnalysis(recvBuff, recvSize, sendBuff);
     if(sendSize > 0)
     {
       /* 応答 */
@@ -255,13 +265,16 @@ void g_UartCommandTask(void *argument)
 
 /**
   * @brief  uart command analysis
-  * @param  argument : not used
-  * @retval None
+  * @param  recvBuff : 受信データ
+  * @param  recvSize : 受信データサイズ
+  * @param  sendBuff : 送信データ
+  * @retval send data size
   */
-void uartCommandAnalysis()
+size_t uartCommandAnalysis(uint8_t* recvBuff, size_t recvSize, uint8_t* sendBuff)
 {
+  size_t sendSize = 0;
 
-
+  return sendSize;
 }
 
 /* USER CODE END 1 */
