@@ -443,10 +443,16 @@ HAL_StatusTypeDef HAL_DMA_Start_IT(DMA_HandleTypeDef *hdma, uint32_t SrcAddress,
 
     /* Enable the transfer complete interrupt */
     /* Enable the transfer Error interrupt */
-    /* USER CODE BEGIN */
-    __HAL_DMA_DISABLE_IT(hdma, DMA_IT_HT);
-    __HAL_DMA_ENABLE_IT(hdma, (DMA_IT_TC | DMA_IT_TE));
-    /* USER CODE END */
+    if (NULL != hdma->XferHalfCpltCallback)
+    {
+      /* Enable the Half transfer complete interrupt as well */
+      __HAL_DMA_ENABLE_IT(hdma, (DMA_IT_TC | DMA_IT_HT | DMA_IT_TE));
+    }
+    else
+    {
+      __HAL_DMA_DISABLE_IT(hdma, DMA_IT_HT);
+      __HAL_DMA_ENABLE_IT(hdma, (DMA_IT_TC | DMA_IT_TE));
+    }
 
     /* Check if DMAMUX Synchronization is enabled*/
     if ((hdma->DMAmuxChannel->CCR & DMAMUX_CxCR_SE) != 0U)

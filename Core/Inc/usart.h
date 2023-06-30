@@ -32,21 +32,42 @@ extern "C" {
 
 /* USER CODE END Includes */
 
-extern UART_HandleTypeDef huart1;
-
 /* USER CODE BEGIN Private defines */
 
 #define PACKET_DATA_SIZE 1024
+#define UART_DMA_RECV_BUFFER_SIZE 1024
+#define UART_DMA_SEND_BUFFER_SIZE 1024
 
 typedef struct {
   uint8_t data[PACKET_DATA_SIZE];
   uint16_t size;
 }packet_t;
+
+typedef struct
+{
+    unsigned short dataPoolWriteIndex;
+    unsigned short dataPoolReadIndex;
+    unsigned char pool[UART_DMA_RECV_BUFFER_SIZE + 2]; /* +2はヘッダサイズ */
+}dataPool_t;
+
+extern dataPool_t g_UartDataPool;
+
 /* USER CODE END Private defines */
+
+extern uint8_t g_uartDMARecvBuff[UART_DMA_RECV_BUFFER_SIZE];
+extern uint8_t g_uartDMASendBuff[UART_DMA_SEND_BUFFER_SIZE];
+
 
 void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+void uartRecvStart(void);
+void uartSendStart(void);
+void uartSend(const uint8_t* const sendData, uint16_t sendSize);
+void usart1_isr(void);
+void usart1DmaRx_isr(void);
+void usart1DmaTx_isr(void);
+
 
 /* USER CODE END Prototypes */
 

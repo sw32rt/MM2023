@@ -3,3 +3,7 @@ Debug/*
 .vscode/*
 build/*
 outData/*
+*.c_save
+*.ftl
+MXTmpFiles/*
+*.ftl_save

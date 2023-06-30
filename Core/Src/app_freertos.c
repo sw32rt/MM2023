@@ -123,30 +123,6 @@ const osThreadAttr_t logTask_attributes = {
   .cb_size = sizeof(logTaskControlBlock),
   .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for uartRecvTask */
-osThreadId_t uartRecvTaskHandle;
-uint32_t uartRecvTaskBuffer[ 128 ];
-osStaticThreadDef_t uartRecvTaskControlBlock;
-const osThreadAttr_t uartRecvTask_attributes = {
-  .name = "uartRecvTask",
-  .stack_mem = &uartRecvTaskBuffer[0],
-  .stack_size = sizeof(uartRecvTaskBuffer),
-  .cb_mem = &uartRecvTaskControlBlock,
-  .cb_size = sizeof(uartRecvTaskControlBlock),
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for uartSendTask */
-osThreadId_t uartSendTaskHandle;
-uint32_t uartSendTaskBuffer[ 128 ];
-osStaticThreadDef_t uartSendTaskControlBlock;
-const osThreadAttr_t uartSendTask_attributes = {
-  .name = "uartSendTask",
-  .stack_mem = &uartSendTaskBuffer[0],
-  .stack_size = sizeof(uartSendTaskBuffer),
-  .cb_mem = &uartSendTaskControlBlock,
-  .cb_size = sizeof(uartSendTaskControlBlock),
-  .priority = (osPriority_t) osPriorityLow,
-};
 /* Definitions for uartCommandTask */
 osThreadId_t uartCommandTaskHandle;
 uint32_t uartCommandTaskBuffer[ 128 ];
@@ -247,8 +223,6 @@ void StartDefaultTask(void *argument);
 extern void g_SoundTask(void *argument);
 extern void g_TofRangingTask(void *argument);
 extern void g_LogTask(void *argument);
-extern void g_UartRecvTask(void *argument);
-extern void g_UartSendTask(void *argument);
 extern void g_UartCommandTask(void *argument);
 void Timer1kHzCallback(void *argument);
 
@@ -327,12 +301,6 @@ void MX_FREERTOS_Init(void) {
   /* creation of logTask */
   logTaskHandle = osThreadNew(g_LogTask, NULL, &logTask_attributes);
 
-  /* creation of uartRecvTask */
-  uartRecvTaskHandle = osThreadNew(g_UartRecvTask, NULL, &uartRecvTask_attributes);
-
-  /* creation of uartSendTask */
-  uartSendTaskHandle = osThreadNew(g_UartSendTask, NULL, &uartSendTask_attributes);
-
   /* creation of uartCommandTask */
   uartCommandTaskHandle = osThreadNew(g_UartCommandTask, NULL, &uartCommandTask_attributes);
 
@@ -373,7 +341,7 @@ void StartDefaultTask(void *argument)
   static uint8_t sendbuff[128] = {0};
 
   osDelay(1000);
-  eraseFlash();
+  // eraseFlash();
   osThreadResume(logTaskHandle);
   HAL_GPIO_WritePin(LED_0_GPIO_Port, LED_0_Pin, 1);
 
@@ -399,7 +367,7 @@ void StartDefaultTask(void *argument)
 //    );
 
 
-    HAL_UART_Transmit_DMA(&huart1, sendbuff, 100);
+    // HAL_UART_Transmit_DMA(USART1, sendbuff, 100);
 
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 500);
     // __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, 500);
